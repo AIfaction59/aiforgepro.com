@@ -1,8 +1,5 @@
-// app/dashboard/page.tsx
 import { redirect } from "next/navigation";
-- import { supabaseServer } from "../supabaseServer";
-+ import { supabaseServer } from "../../supabaseServer";
-
+import { supabaseServer } from "../../supabaseServer";
 
 export default async function DashboardPage() {
   const {
