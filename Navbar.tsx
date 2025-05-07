@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "./supabase";
 import Link from "next/link";
+import supabase from "./supabase";
 
 export default function Navbar() {
   const [session, setSession] = useState<any>(null);
