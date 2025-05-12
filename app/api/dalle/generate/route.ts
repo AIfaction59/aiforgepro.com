@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.error("❌ OPENAI_API_KEY is not defined");
+    console.error("OPENAI_API_KEY not defined");
     return NextResponse.json(
       { error: "Server misconfiguration: missing OPENAI_API_KEY" },
       { status: 500 }
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const payload = await res.json();
     if (!res.ok) {
-      console.error("OpenAI error:", payload);
+      console.error("OpenAI error", payload);
       return NextResponse.json(
         { error: payload.error?.message || "OpenAI request failed" },
         { status: res.status }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     const imageUrl = payload.data?.[0]?.url;
     if (!imageUrl) {
-      console.error("No URL in OpenAI response:", payload);
+      console.error("No URL returned from OpenAI", payload);
       return NextResponse.json(
         { error: "No image URL returned" },
         { status: 500 }
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ imageUrl });
   } catch (err: any) {
-    console.error("Unexpected DALL·E error:", err);
+    console.error("Unexpected error in DALL·E route", err);
     return NextResponse.json(
       { error: "Unexpected server error" },
       { status: 500 }
