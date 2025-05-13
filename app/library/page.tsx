@@ -1,7 +1,8 @@
 // app/library/page.tsx
 import { redirect } from "next/navigation";
-import { supabaseServer } from "../../supabaseServer";
+import { supabaseServer } from "@/lib/supabase/server";
 import Link from "next/link";
+import Image from "next/image";
 
 type Props = { searchParams?: { page?: string } };
 
@@ -38,7 +39,10 @@ export default async function LibraryPage({ searchParams }: Props) {
       {images.length === 0 ? (
         <p>
           No images yet.{" "}
-          <Link href="/generate" className="underline text-blue-600">
+          <Link
+            href="/generate"
+            className="underline text-blue-600 hover:text-blue-800"
+          >
             Generate one now
           </Link>
           .
@@ -46,11 +50,18 @@ export default async function LibraryPage({ searchParams }: Props) {
       ) : (
         <div className="grid grid-cols-3 gap-4">
           {images.map((img) => (
-            <div key={img.id} className="border rounded overflow-hidden">
-              <img
+            <div
+              key={img.id}
+              className="border rounded overflow-hidden bg-gray-50"
+            >
+              <Image
                 src={img.image_url}
-                alt="User generated image"
-                className="w-full h-auto block"
+                alt={`Generated at ${new Date(
+                  img.created_at
+                ).toLocaleString()}`}
+                width={300}
+                height={300}
+                className="object-cover w-full h-48"
               />
             </div>
           ))}
@@ -60,12 +71,18 @@ export default async function LibraryPage({ searchParams }: Props) {
       {/* Pagination Controls */}
       <div className="mt-6 flex justify-between">
         {page > 1 && (
-          <Link href={`/library?page=${page - 1}`} className="underline">
+          <Link
+            href={`/library?page=${page - 1}`}
+            className="underline hover:text-gray-700"
+          >
             ← Previous
           </Link>
         )}
         {images.length === pageSize && (
-          <Link href={`/library?page=${page + 1}`} className="underline">
+          <Link
+            href={`/library?page=${page + 1}`}
+            className="underline hover:text-gray-700"
+          >
             Next →
           </Link>
         )}
