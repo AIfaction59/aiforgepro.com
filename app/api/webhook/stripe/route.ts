@@ -1,51 +1,51 @@
 // app/api/webhook/stripe/route.ts
-import { NextResponse } from "next/server";
-import { stripe } from "../../../../lib/stripe";
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { supabaseServer } from "../../../../supabaseServer";
 
-export async function POST(req: Request) {
-  const rawBody  = await req.text();
-  const sig      = req.headers.get("stripe-signature")!;
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-04-30.basil", // make sure this matches your installed SDK version
+});
 
-  let event;
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+export async function POST(req: NextRequest) {
+  const buf = Buffer.from(await req.arrayBuffer());
+  const sig = req.headers.get("stripe-signature")!;
+
+  let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
-  } catch (err: any) {
-    console.error("❌ Invalid signature:", err.message);
-    return NextResponse.json({ received: false }, { status: 400 });
+    event = stripe.webhooks.constructEvent(buf, sig, endpointSecret);
+  } catch (err) {
+    console.error("⚠️  Webhook signature verification failed.", err);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // A) After checkout, immediately award credits
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as any;
-    const userId  = session.metadata.userId;
-    const credits = parseInt(session.metadata.credits, 10);
+    const session = event.data.object as Stripe.Checkout.Session;
+    const userId = session.metadata?.userId!;
+    const creditsToAdd = parseInt(session.metadata?.credits || "0", 10);
 
-    const { error } = await supabaseServer
-      .from("credits")
-      .insert({ user_id: userId, amount: credits });
-    if (error) console.error("❌ credits insert failed:", error);
+    if (userId && creditsToAdd > 0) {
+      const { data: profile, error: fetchErr } = await supabaseServer
+        .from("profiles")
+        .select("credits")
+        .eq("id", userId)
+        .single();
+
+      if (fetchErr) {
+        console.error("❌ Error fetching profile:", fetchErr);
+      } else {
+        const newTotal = (profile.credits || 0) + creditsToAdd;
+        const { error: updateErr } = await supabaseServer
+          .from("profiles")
+          .update({ credits: newTotal })
+          .eq("id", userId);
+
+        if (updateErr) console.error("❌ Error updating credits:", updateErr);
+      }
+    }
   }
 
-  // B) Also award on invoice.paid (for renewals and sometimes the first payment)
-  if (event.type === "invoice.paid") {
-    const invoice = event.data.object as any;
-    // fetch the subscription to read its metadata
-    const sub = await stripe.subscriptions.retrieve(
-      invoice.subscription as string
-    );
-    const userId  = sub.metadata.userId;
-    const credits = parseInt(sub.metadata.credits, 10);
-
-    const { error } = await supabaseServer
-      .from("credits")
-      .insert({ user_id: userId, amount: credits });
-    if (error) console.error("❌ credits insert failed on invoice.paid:", error);
-  }
-
-  return NextResponse.json({ received: true });
+  return NextResponse.json({ received: true }, { status: 200 });
 }
