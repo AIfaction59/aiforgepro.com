@@ -1,91 +1,46 @@
-// app/library/page.tsx
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
-import Link from "next/link";
-import Image from "next/image";
+"use client";
 
-type Props = { searchParams?: { page?: string } };
+import { useEffect, useState } from "react";
 
-export default async function LibraryPage({ searchParams }: Props) {
-  // Protect route
-  const {
-    data: { session },
-  } = await supabaseServer.auth.getSession();
-  if (!session) redirect("/auth/login");
+interface ImageRecord {
+  id: number;
+  image_url: string;
+  created_at: string;
+}
 
-  // Pagination
-  const page = parseInt(searchParams?.page || "1", 10);
-  const pageSize = 12;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+export default function LibraryPage() {
+  const [images, setImages] = useState<ImageRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch user’s images
-  const { data: images = [], error } = await supabaseServer
-    .from("images")
-    .select("id, image_url, created_at")
-    .eq("user_id", session.user.id)
-    .order("created_at", { ascending: false })
-    .range(from, to);
-
-  if (error) {
-    console.error("Error loading images:", error);
-    return <div className="p-6">Failed to load images.</div>;
-  }
+  useEffect(() => {
+    fetch("/api/images")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        setImages(data.images);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl mb-4">Your Image Library</h1>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl mb-4">Your Library</h1>
 
-      {images.length === 0 ? (
-        <p>
-          No images yet.{" "}
-          <Link
-            href="/generate"
-            className="underline text-blue-600 hover:text-blue-800"
-          >
-            Generate one now
-          </Link>
-          .
-        </p>
-      ) : (
-        <div className="grid grid-cols-3 gap-4">
-          {images.map((img) => (
-            <div
-              key={img.id}
-              className="border rounded overflow-hidden bg-gray-50"
-            >
-              <Image
-                src={img.image_url}
-                alt={`Generated at ${new Date(
-                  img.created_at
-                ).toLocaleString()}`}
-                width={300}
-                height={300}
-                className="object-cover w-full h-48"
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      {loading && <p>Loading your images…</p>}
+      {error && <p className="text-red-500">❌ {error}</p>}
+      {!loading && images.length === 0 && <p>No images generated yet.</p>}
 
-      {/* Pagination Controls */}
-      <div className="mt-6 flex justify-between">
-        {page > 1 && (
-          <Link
-            href={`/library?page=${page - 1}`}
-            className="underline hover:text-gray-700"
-          >
-            ← Previous
-          </Link>
-        )}
-        {images.length === pageSize && (
-          <Link
-            href={`/library?page=${page + 1}`}
-            className="underline hover:text-gray-700"
-          >
-            Next →
-          </Link>
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {images.map((img) => (
+          <img
+            key={img.id}
+            src={img.image_url}
+            alt={`Generated on ${new Date(img.created_at).toLocaleString()}`}
+            className="w-full h-auto rounded shadow"
+          />
+        ))}
       </div>
     </div>
   );

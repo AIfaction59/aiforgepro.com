@@ -1,19 +1,40 @@
 // app/api/images/route.ts
 import { NextRequest, NextResponse } from "next/server";
-// 3 levels up from app/api/images/route.ts → project root
-import { supabaseServer } from "../../../supabaseServer"; 
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
+
+export async function GET(req: NextRequest) {
+  // initialize Supabase in this Edge Route
+  const supabase = createRouteHandlerClient({ cookies });
+
+  const { data: images, error } = await supabase
+    .from("images")
+    .select("id, image_url, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error loading images:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ images });
+}
 
 export async function POST(req: NextRequest) {
-  const { imageUrl } = await req.json();
+  const supabase = createRouteHandlerClient({ cookies });
 
-  // Grab the logged-in user session
-  const { data: { session } } = await supabaseServer.auth.getSession();
-  if (!session) {
+  // get the logged-in session
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // Insert the new image record
-  const { error } = await supabaseServer
+  const { imageUrl } = await req.json();
+  const { error } = await supabase
     .from("images")
     .insert({
       user_id: session.user.id,
@@ -22,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     console.error("Error saving image:", error);
-    return NextResponse.json({ error: "Failed to save image" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
