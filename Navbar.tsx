@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import supabase from "./supabase";
+import supabase from "@/lib/supabase/browser";
 
 export default function Navbar() {
   const [session, setSession] = useState<any>(null);
@@ -17,7 +17,9 @@ export default function Navbar() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-    return () => { listener.subscription.unsubscribe(); };
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -28,20 +30,20 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow p-4 flex justify-between items-center">
       <div className="flex items-center space-x-6">
-        <Link href="/">
-          <a className="text-xl font-bold">AiForgePro</a>
+        <Link href="/" className="text-xl font-bold">
+          AiForgePro
         </Link>
 
         {session && (
           <>
-            <Link href="/generate">
-              <a className="hover:underline">Generate</a>
+            <Link href="/generate" className="hover:underline">
+              Generate
             </Link>
-            <Link href="/library">
-              <a className="hover:underline">Library</a>
+            <Link href="/library" className="hover:underline">
+              Library
             </Link>
-            <Link href="/pricing">
-              <a className="hover:underline">Buy Credits</a>
+            <Link href="/pricing" className="hover:underline">
+              Buy Credits
             </Link>
           </>
         )}
@@ -50,11 +52,11 @@ export default function Navbar() {
       <div className="space-x-4">
         {!session ? (
           <>
-            <Link href="/auth/login">
-              <a className="text-blue-600 hover:underline">Log In</a>
+            <Link href="/auth/login" className="text-blue-600 hover:underline">
+              Log In
             </Link>
-            <Link href="/auth/signup">
-              <a className="text-green-600 hover:underline">Sign Up</a>
+            <Link href="/auth/signup" className="text-green-600 hover:underline">
+              Sign Up
             </Link>
           </>
         ) : (

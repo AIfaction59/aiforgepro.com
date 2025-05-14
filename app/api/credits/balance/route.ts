@@ -1,6 +1,6 @@
 // app/api/credits/balance/route.ts
 import { NextResponse } from "next/server";
-// 4 levels up from app/api/credits/balance/route.ts → project root
+// this path might need four “../” instead of three depending on where you put supabaseServer.ts:
 import { supabaseServer } from "../../../../supabaseServer";
 
 export async function GET() {
@@ -11,16 +11,15 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // Call the RPC function to sum credits
-  const { data, error } = await supabaseServer.rpc("sum_credits", {
-    uid: session.user.id,
-  });
+  const { data: profile, error } = await supabaseServer
+    .from("profiles")
+    .select("credits")
+    .eq("id", session.user.id)
+    .single();
 
   if (error) {
-    console.error("Error fetching balance:", error);
-    return NextResponse.json({ error: "Failed to load balance" }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const balance: number = data || 0;
-  return NextResponse.json({ balance });
+  return NextResponse.json({ credits: profile.credits });
 }

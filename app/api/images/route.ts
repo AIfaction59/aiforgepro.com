@@ -4,12 +4,19 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
-  // initialize Supabase in this Edge Route
   const supabase = createRouteHandlerClient({ cookies });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return NextResponse.json({ images: [] });
+  }
 
   const { data: images, error } = await supabase
     .from("images")
     .select("id, image_url, created_at")
+    .eq("user_id", session.user.id)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -22,8 +29,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const supabase = createRouteHandlerClient({ cookies });
-
-  // get the logged-in session
   const {
     data: { session },
     error: sessionError,
@@ -35,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   const { imageUrl } = await req.json();
   const { error } = await supabase
-    .from("images")
+    .from("images")           // ← make sure this matches your table name
     .insert({
       user_id: session.user.id,
       image_url: imageUrl,
