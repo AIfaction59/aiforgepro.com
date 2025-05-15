@@ -2,34 +2,24 @@
 "use client";
 
 import { useEffect } from "react";
-import { useUser, useSupabaseClient } from "@supabase/auth-helpers-react";
+import { useSession, useSupabaseClient } from "@supabase/auth-helpers-react";
 
 export default function SyncProfile() {
-  const user = useUser();
+  const session = useSession();
   const supabase = useSupabaseClient();
 
   useEffect(() => {
-    if (!user) return;
-
-    const upsertProfile = async () => {
-      try {
-        const { error } = await supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: user.id,    // PK in your profiles table
-              credits: 0      // default starting credits
-            },
-            { onConflict: "id" }
-          );
-        if (error) console.error("Failed to sync profile:", error);
-      } catch (err) {
-        console.error("Unexpected error syncing profile:", err);
-      }
-    };
-
-    upsertProfile();
-  }, [user, supabase]);
+    if (!session) return;
+    (async () => {
+      const { error } = await supabase
+        .from("profiles")
+        .upsert(
+          { id: session.user.id, email: session.user.email },
+          { onConflict: "id" }
+        );
+      if (error) console.error("Profile upsert error:", error);
+    })();
+  }, [session, supabase]);
 
   return null;
 }
