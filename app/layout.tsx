@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 import { SessionContextProvider } from "@supabase/auth-helpers-react";
-import Navbar from "../Navbar";
+import Navbar from "../components/Navbar";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Initialize Supabase client once per session
