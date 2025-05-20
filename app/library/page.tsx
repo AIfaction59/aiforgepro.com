@@ -3,37 +3,45 @@
 
 import { useEffect, useState } from "react";
 
-type ImageRecord = { id: string; image_url: string; created_at: string };
+interface Img {
+  id: string;
+  image_url: string;
+  created_at: string;
+}
 
 export default function LibraryPage() {
-  const [images, setImages] = useState<ImageRecord[]>([]);
+  const [images, setImages] = useState<Img[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/images")
       .then((res) => res.json())
       .then((data) => {
-        if (data.error) throw new Error(data.error);
-        setImages(data);
+        if (data.error) setError(data.error);
+        else setImages(data.images);
       })
       .catch((err) => setError(err.message));
   }, []);
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl mb-4">Your Library</h1>
-      {error && <p className="text-red-500">Error: {error}</p>}
-      {images.length === 0 && !error && <p>No saved images yet.</p>}
-      <div className="grid grid-cols-2 gap-4">
-        {images.map((img) => (
-          <div key={img.id} className="border p-2 rounded">
-            <img src={img.image_url} alt="" className="rounded" />
-            <p className="text-xs text-gray-500 mt-2">
-              {new Date(img.created_at).toLocaleString()}
-            </p>
-          </div>
-        ))}
-      </div>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+
+      {images.length === 0 ? (
+        <p>No images yet.</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {images.map((img) => (
+            <img
+              key={img.id}
+              src={img.image_url}
+              alt={`Generated at ${new Date(img.created_at).toLocaleString()}`}
+              className="w-full h-auto rounded shadow"
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
