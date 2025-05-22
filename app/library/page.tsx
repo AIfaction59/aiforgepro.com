@@ -1,73 +1,35 @@
 // app/library/page.tsx
 "use client";
+import useSWR from "swr";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-
-interface ImageRecord {
-  id: string;
-  path: string;
-  created_at: string;
-}
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function LibraryPage() {
-  const [images, setImages] = useState<ImageRecord[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, error } = useSWR("/api/images", fetcher);
 
-  useEffect(() => {
-    fetch("/api/images")
-      .then(async (res) => {
-        const payload = await res.json();
-        if (!res.ok) throw new Error(payload.error || res.statusText);
-        return payload.images as ImageRecord[];
-      })
-      .then((imgs) => setImages(imgs))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <p className="p-6 text-center">Loading your library…</p>;
-  if (error)   return <p className="p-6 text-red-500">Error: {error}</p>;
-  if (!images.length)
-    return (
-      <div className="p-6 text-center">
-        <p className="mb-4">You haven’t generated any images yet.</p>
-        <Link href="/generate" className="text-blue-600 underline">
-          Go generate one →
-        </Link>
-      </div>
-    );
+  if (error) return <p className="p-6">Error loading images: {error.error || error.message}</p>;
+  if (!data) return <p className="p-6">Loading…</p>;
+  if (!data.images.length) return <p className="p-6">No images yet.</p>;
 
   return (
-    <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {images.map((img) => (
-        <div
-          key={img.id}
-          className="bg-white rounded-lg shadow overflow-hidden flex flex-col"
-        >
-          <div className="flex-1">
-            <img
-              src={img.path}
-              alt={`Generated at ${new Date(img.created_at).toLocaleString()}`}
-              className="object-cover w-full h-48"
-            />
-          </div>
-          <div className="p-2 flex items-center justify-between text-xs text-gray-600">
-            <span>
-              {new Date(img.created_at).toLocaleString([], {
-                dateStyle: "short",
-                timeStyle: "short",
-              })}
-            </span>
+    <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+      {data.images.map((img: any) => (
+        <div key={img.id} className="border p-2 rounded flex flex-col">
+          {img.url ? (
+            <img src={img.url} alt="" className="w-full h-auto rounded" />
+          ) : (
+            <div className="flex items-center justify-center bg-gray-200 h-32">No preview</div>
+          )}
+          <p className="text-xs mt-1">{new Date(img.created_at).toLocaleString()}</p>
+          {img.url && (
             <a
-              href={img.path}
+              href={img.url}
               download
-              className="text-blue-600 hover:underline"
+              className="mt-auto text-center text-blue-600 hover:underline"
             >
               Download
             </a>
-          </div>
+          )}
         </div>
       ))}
     </div>
