@@ -1,6 +1,7 @@
+// next.config.js
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  // no experimental flags needed
+module.exports = {
+  images: {
+    domains: ["https://malddjbzsfqrzgkjuyny.supabase.co/storage/v1/s3"],
+  },
 };
-
-module.exports = nextConfig;

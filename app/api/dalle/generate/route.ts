@@ -1,7 +1,7 @@
 // app/api/dalle/generate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { supabaseServer } from "../../../../supabaseServer";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
   const { prompt } = await req.json();
