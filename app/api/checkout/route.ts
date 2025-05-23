@@ -1,7 +1,7 @@
 // app/api/checkout/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "../../../lib/stripe";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export async function GET() {
   return NextResponse.json(

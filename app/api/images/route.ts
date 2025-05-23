@@ -1,6 +1,6 @@
 // app/api/images/route.ts
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export async function GET() {
   // 1) grab the user session server-side
