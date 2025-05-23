@@ -4,43 +4,38 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
 export async function GET() {
-  // 1️⃣ Initialize Supabase on the Edge, using the request cookies
-  const supabase = createRouteHandlerClient({ cookies });
+  try {
+    const supabase = createRouteHandlerClient({ cookies });
 
-  // 2️⃣ Ensure we have a logged-in session
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-  if (sessionError || !session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    // 1) get session
+    const {
+      data: { session },
+      error: sessErr,
+    } = await supabase.auth.getSession();
+    if (sessErr || !session) throw new Error("Not authenticated");
+
+    // 2) fetch this user’s images
+    const { data: images, error } = await supabase
+      .from("images")
+      .select("id, image_url, created_at")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+
+    // 3) sign each URL (private bucket)
+    const signed = await Promise.all(
+      images.map(async (img) => {
+        const { data, error: signErr } = await supabase.storage
+          .from("product-images")
+          .createSignedUrl(img.image_url, 60);
+        if (signErr) console.error("🚨", signErr);
+        return { ...img, url: data.signedUrl };
+      })
+    );
+
+    return NextResponse.json({ images: signed });
+  } catch (err: any) {
+    console.error("❌ /api/images error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-
-  // 3️⃣ Fetch all images for this user
-  const { data: images, error } = await supabase
-    .from("images")
-    .select("id, image_url, created_at")
-    .eq("user_id", session.user.id)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Error loading images:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // 4️⃣ For each storage path, create a short-lived signed URL (private bucket)
-  const signed = await Promise.all(
-    images.map(async (img) => {
-      const {
-        data: { signedUrl },
-        error: signErr,
-      } = await supabase.storage
-        .from("product-images")
-        .createSignedUrl(img.image_url, 60); // valid for 60s
-      if (signErr) console.error("⚠️ Signature error:", signErr);
-      return { ...img, url: signedUrl };
-    })
-  );
-
-  return NextResponse.json({ images: signed });
 }

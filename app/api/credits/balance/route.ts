@@ -1,25 +1,28 @@
 // app/api/credits/balance/route.ts
 import { NextResponse } from "next/server";
-// this path might need four “../” instead of three depending on where you put supabaseServer.ts:
-import { supabaseServer } from "../../../../supabaseServer";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
 export async function GET() {
-  const {
-    data: { session },
-  } = await supabaseServer.auth.getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  try {
+    const supabase = createRouteHandlerClient({ cookies });
+
+    const {
+      data: { session },
+      error: sessErr,
+    } = await supabase.auth.getSession();
+    if (sessErr || !session) throw new Error("Not authenticated");
+
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("id", session.user.id)
+      .single();
+    if (error) throw error;
+
+    return NextResponse.json({ credits: profile.credits });
+  } catch (err: any) {
+    console.error("❌ /api/credits/balance error:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-
-  const { data: profile, error } = await supabaseServer
-    .from("profiles")
-    .select("credits")
-    .eq("id", session.user.id)
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ credits: profile.credits });
 }
