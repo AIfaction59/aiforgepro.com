@@ -18,7 +18,7 @@ export default function Navbar() {
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setCredits(null);               // clear credits when session changes
+      setCredits(null); // clear credits when session changes
     });
     return () => {
       listener.subscription.unsubscribe();
@@ -45,10 +45,13 @@ export default function Navbar() {
     router.replace("/");
   };
 
+  // Decide where the logo should link:
+  const homeHref = session ? "/dashboard" : "/";
+
   return (
     <nav className="bg-white shadow p-4 flex justify-between items-center">
       <div className="flex items-center space-x-6">
-        <Link href="/" className="text-xl font-bold">
+        <Link href={homeHref} className="text-xl font-bold">
           AiForgePro
         </Link>
 
