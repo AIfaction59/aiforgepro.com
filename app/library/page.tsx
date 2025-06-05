@@ -6,19 +6,19 @@ import Link from "next/link";
 type Props = { searchParams?: { page?: string } };
 
 export default async function LibraryPage({ searchParams }: Props) {
-  // Protect route
+  // 1) Protect route
   const {
     data: { session },
   } = await supabaseServer.auth.getSession();
   if (!session) redirect("/auth/login");
 
-  // Pagination
+  // 2) Pagination setup
   const page = parseInt(searchParams?.page || "1", 10);
   const pageSize = 12;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  // Fetch user’s images
+  // 3) Fetch only THIS user’s images
   const { data: images = [], error } = await supabaseServer
     .from("images")
     .select("id, image_url, created_at")
