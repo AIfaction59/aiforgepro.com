@@ -1,7 +1,5 @@
 // lib/supabaseServer.ts
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createRouteHandlerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 
-export const supabaseServer = createRouteHandlerClient({
-  cookies,
-});
+export const supabaseServer = createRouteHandlerSupabaseClient({ cookies });

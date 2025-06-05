@@ -1,32 +1,52 @@
 // app/dashboard/page.tsx
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabaseServer";
-import supabase from "@/lib/supabase";
-import Link from "next/link";
 
-export default async function DashboardPage() {
-  // fetch the current session on the server
+type Props = { };
+
+export default async function DashboardPage(props: Props) {
+  // Protect route on the server side
   const {
     data: { session },
   } = await supabaseServer.auth.getSession();
-
-  // if not logged in, send them to /auth/login
   if (!session) {
     redirect("/auth/login");
   }
 
+  // Fetch the user's current credit balance
+  const { data: profile, error } = await supabaseServer
+    .from("profiles")
+    .select("credits")
+    .eq("id", session.user.id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching profile:", error);
+    // You could show an error page or just default to 0
+  }
+
+  const credits = profile?.credits ?? 0;
+
   return (
     <div className="p-6">
-      <h2 className="text-2xl mb-4">Dashboard</h2>
-      <p className="mb-6">You’re logged in as {session.user.email}</p>
-
-      {/* “Generate Image” button */}
-      <Link
-        href="/generate"
-        className="inline-block px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-      >
-        Generate Image
-      </Link>
+      <h1 className="text-3xl font-bold mb-4">Welcome, {session.user.email}</h1>
+      <p className="text-lg">
+        You have <span className="font-semibold">{credits}</span> credits remaining.
+      </p>
+      <div className="mt-6 space-x-4">
+        <button
+          onClick={() => {}}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Generate an Image
+        </button>
+        <button
+          onClick={() => {}}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          Buy More Credits
+        </button>
+      </div>
     </div>
   );
 }
