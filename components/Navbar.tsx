@@ -1,9 +1,10 @@
+// components/Navbar.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import supabase from "@/lib/supabase/browser"; // adjust path if needed
+import supabase from "@/lib/supabase/browser";
 
 export default function Navbar() {
   const [session, setSession] = useState<any>(null);
@@ -17,7 +18,7 @@ export default function Navbar() {
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setCredits(null);
+      setCredits(null); // clear credits when session changes
     });
     return () => {
       listener.subscription.unsubscribe();
@@ -47,10 +48,7 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow p-4 flex justify-between items-center">
       <div className="flex items-center space-x-6">
-        <Link
-          href={session ? "/dashboard" : "/"}
-          className="text-xl font-bold"
-        >
+        <Link href={session ? "/dashboard" : "/"} className="text-xl font-bold">
           AiForgePro
         </Link>
 
@@ -75,10 +73,7 @@ export default function Navbar() {
             <Link href="/auth/login" className="text-blue-600 hover:underline">
               Log In
             </Link>
-            <Link
-              href="/auth/signup"
-              className="text-green-600 hover:underline"
-            >
+            <Link href="/auth/signup" className="text-green-600 hover:underline">
               Sign Up
             </Link>
           </>
@@ -89,11 +84,7 @@ export default function Navbar() {
             {/* show credits */}
             <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded">
               Credits:{" "}
-              {credits === null ? (
-                <em>Loading…</em>
-              ) : (
-                credits
-              )}
+              {credits === null ? <em>Loading…</em> : credits}
             </span>
             {/* sign out */}
             <button
