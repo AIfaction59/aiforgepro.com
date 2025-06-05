@@ -1,58 +1,50 @@
-// app/auth/signup/page.tsx
+// app/auth/login/page.tsx
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { useRouter } from "next/navigation";
 
-export default function SignUpPage() {
+export default function LoginPage() {
   const supabase = useSupabaseClient();
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setMessage(null);
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: {
-        // redirect users back here after they click the magic link:
-        emailRedirectTo: window.location.origin + "/auth/verify",
-      }
     });
 
     setLoading(false);
 
-    if (error) {
-      setError(error.message);
+    if (signInError) {
+      setError(signInError.message);
     } else {
-      setMessage(
-        "🎉 Please check your inbox for a confirmation link before logging in."
-      );
-      // optional: automatically navigate them to a “check your email” page
-      // router.push("/auth/verify");
+      router.push("/dashboard");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <form
-        onSubmit={handleSignUp}
+        onSubmit={handleLogin}
         className="w-full max-w-md bg-white p-6 rounded-lg shadow"
       >
-        <h1 className="text-2xl mb-4">Sign Up</h1>
+        <h1 className="text-2xl mb-4">Log In</h1>
+
         {error && <p className="mb-4 text-red-500">{error}</p>}
-        {message && <p className="mb-4 text-green-600">{message}</p>}
+
         <label className="block mb-3">
-          <span className="block text-sm">Email</span>
+          <span className="text-sm">Email</span>
           <input
             type="email"
             className="mt-1 block w-full border rounded p-2"
@@ -61,8 +53,9 @@ export default function SignUpPage() {
             required
           />
         </label>
+
         <label className="block mb-4">
-          <span className="block text-sm">Password</span>
+          <span className="text-sm">Password</span>
           <input
             type="password"
             className="mt-1 block w-full border rounded p-2"
@@ -71,17 +64,19 @@ export default function SignUpPage() {
             required
           />
         </label>
+
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 rounded bg-green-600 text-white hover:bg-green-700"
+          className="w-full py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
         >
-          {loading ? "Signing up…" : "Sign Up"}
+          {loading ? "Logging in…" : "Log In"}
         </button>
+
         <p className="mt-4 text-center text-sm">
-          Already have an account?{" "}
-          <a href="/auth/login" className="text-green-600 hover:underline">
-            Log In
+          Don’t have an account?{" "}
+          <a href="/auth/signup" className="text-blue-600 hover:underline">
+            Sign Up
           </a>
         </p>
       </form>
