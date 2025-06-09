@@ -12,12 +12,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="en">
-      <body className="bg-gray-50 min-h-screen">
+      <body className="bg-gray-50 min-h-screen flex flex-col">
         <SessionContextProvider supabaseClient={supabaseClient}>
-          {/* this will upsert your profiles.id row on every login/signup */}
-        
           <Navbar />
-          {children}
+          <main className="flex-grow flex items-center justify-center px-4">
+            {children}
+          </main>
         </SessionContextProvider>
       </body>
     </html>
