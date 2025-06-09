@@ -2,11 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-export const config = {
-  api: {
-    bodyParser: { sizeLimit: "10mb" }, // allow big uploads
-  },
-};
+// Tell Next.js this handler runs on the Edge runtime
+export const runtime = "edge";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -16,33 +13,33 @@ export async function POST(req: NextRequest) {
   try {
     const { prompt, file } = await req.json();
 
-    let res;
+    let result;
     if (file) {
+      // file should be a base64 data URL: data:<mime>;base64,<data>
       const match = file.match(/^data:(.+);base64,(.+)$/);
-      if (!match) throw new Error("Invalid file data");
-      const buffer = Buffer.from(match[2], "base64");
+      if (!match) throw new Error("Invalid file upload");
+      const [, mimeType, b64data] = match;
+      const buffer = Buffer.from(b64data, "base64");
+      const blob = new Blob([buffer], { type: mimeType });
 
-      // Generate a variation of the uploaded image
-      res = await openai.images.createVariation({
-        image: buffer,
+      result = await openai.images.createVariation({
+        image: blob,
         n: 1,
         size: "1024x1024",
       });
     } else {
-      // Text-only generation
-      res = await openai.images.generate({
+      result = await openai.images.generate({
         prompt,
         n: 1,
         size: "1024x1024",
       });
     }
 
-    const imageUrl = res.data[0].url;
-    return NextResponse.json({ imageUrl });
-  } catch (err: any) {
-    console.error("DALL·E error:", err);
+    return NextResponse.json({ imageUrl: result.data[0].url });
+  } catch (e: any) {
+    console.error("DALL·E Error:", e);
     return NextResponse.json(
-      { error: err.message || "Server error" },
+      { error: e.message || "Server error" },
       { status: 500 }
     );
   }
