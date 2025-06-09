@@ -1,44 +1,49 @@
 // app/api/dalle/generate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { supabaseServer } from "@/lib/supabaseServer";
+
+export const config = {
+  api: {
+    bodyParser: { sizeLimit: "10mb" }, // allow big uploads
+  },
+};
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(req: NextRequest) {
-  const { prompt } = await req.json();
+  try {
+    const { prompt, file } = await req.json();
 
-  // 1) Make sure they’re signed in
-  const {
-    data: { session },
-  } = await supabaseServer.auth.getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    let res;
+    if (file) {
+      const match = file.match(/^data:(.+);base64,(.+)$/);
+      if (!match) throw new Error("Invalid file data");
+      const buffer = Buffer.from(match[2], "base64");
+
+      // Generate a variation of the uploaded image
+      res = await openai.images.createVariation({
+        image: buffer,
+        n: 1,
+        size: "1024x1024",
+      });
+    } else {
+      // Text-only generation
+      res = await openai.images.generate({
+        prompt,
+        n: 1,
+        size: "1024x1024",
+      });
+    }
+
+    const imageUrl = res.data[0].url;
+    return NextResponse.json({ imageUrl });
+  } catch (err: any) {
+    console.error("DALL·E error:", err);
+    return NextResponse.json(
+      { error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
-  const userId = session.user.id;
-
-  // 2) Check their credits
-  const { data: profile, error: fetchErr } = await supabaseServer
-    .from("profiles")
-    .select("credits")
-    .eq("id", userId)
-    .single();
-  if (fetchErr) {
-    return NextResponse.json({ error: "Could not fetch credits" }, { status: 500 });
-  }
-  if ((profile.credits || 0) < 1) {
-    return NextResponse.json({ error: "No credits left" }, { status: 402 });
-  }
-
-  // 3) Generate the image
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-  const resp = await openai.images.generate({ prompt, n: 1, size: "1024x1024" });
-  const imageUrl = resp.data[0].url!;
-
-  // 4) Deduct one credit
-  const newCredits = (profile.credits || 0) - 1;
-  await supabaseServer
-    .from("profiles")
-    .update({ credits: newCredits })
-    .eq("id", userId);
-
-  return NextResponse.json({ imageUrl, credits: newCredits });
 }
