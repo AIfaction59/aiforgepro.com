@@ -5,6 +5,7 @@ import { useState } from "react";
 
 export default function GeneratePage() {
   const [prompt, setPrompt] = useState("");
+  const [style, setStyle] = useState("studio");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,26 +17,23 @@ export default function GeneratePage() {
     setImageUrl(null);
 
     try {
-      // 1) Call the backend to generate with DALL·E
       const res = await fetch("/api/dalle/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, style }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || `Error ${res.status}`);
-        setLoading(false);
-        return;
+      } else {
+        setImageUrl(data.imageUrl);
+        // persist to library
+        await fetch("/api/images", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: data.imageUrl }),
+        });
       }
-      setImageUrl(data.imageUrl);
-
-      // 2) Deduct 1 credit / Save to library
-      await fetch("/api/images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: data.imageUrl }),
-      });
     } catch (err: any) {
       setError(err.message || "Network error");
     } finally {
@@ -44,41 +42,77 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto">
-      <h1 className="text-2xl mb-4">Generate an Image</h1>
-      <form onSubmit={handleSubmit} className="mb-6">
-        <label className="block mb-2">
-          <span className="text-sm">Prompt</span>
-          <input
-            type="text"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="mt-1 block w-full border rounded p-2"
-            placeholder="Describe your image…"
-            required
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          {loading ? "Generating…" : "Generate"}
-        </button>
-      </form>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+      <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow">
+        <h1 className="text-2xl mb-4 text-center">Generate a Product Image</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block mb-1 text-sm">Prompt</label>
+            <input
+              type="text"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="w-full border rounded p-2"
+              placeholder="Describe your product…"
+              required
+            />
+          </div>
 
-      {error && <p className="text-red-500 mb-4">❌ {error}</p>}
+          <div>
+            <label className="block mb-1 text-sm">Background Style</label>
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+              className="w-full border rounded p-2"
+            >
+              <option value="studio">Studio</option>
+              <option value="outdoor">Outdoor</option>
+              <option value="minimalist">Minimalist</option>
+              <option value="fantasy">Fantasy</option>
+              <option value="high contrast">High Contrast</option>
+              <option value="colored background">Colored Background</option>
+              <option value="transparent background">Transparent Background</option>
+              <option value="lifestyle">Lifestyle</option>
+              <option value="make-up">Make-Up</option>
+              <option value="technology">Technology</option>
+              <option value="sci-fi">Sci-Fi</option>
+              <option value="gray">Gray</option>
+              <option value="black">Black</option>
+              <option value="white">White</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="light gray">Light Gray</option>
+              <option value="kitchen counter">Kitchen Counter</option>
+              <option value="camping">Camping</option>
+              <option value="garage">Garage</option>
+              <option value="fitness">Fitness</option>
+              <option value="office desk">Office Desk</option>
+              <option value="floating product">Floating Product</option>
+            </select>
+          </div>
 
-      {imageUrl && (
-        <div>
-          <h2 className="text-xl mb-2">Result</h2>
-          <img
-            src={imageUrl}
-            alt="Generated by DALL·E-3"
-            className="rounded shadow mx-auto"
-          />
-        </div>
-      )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            {loading ? "Generating…" : "Generate"}
+          </button>
+        </form>
+
+        {error && <p className="mt-4 text-red-500">❌ {error}</p>}
+
+        {imageUrl && (
+          <div className="mt-6 text-center">
+            <h2 className="text-xl mb-2">Result</h2>
+            <img
+              src={imageUrl}
+              alt={`Generated (${style})`}
+              className="rounded shadow mx-auto"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
