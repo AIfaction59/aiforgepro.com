@@ -6,6 +6,7 @@ import { useState } from "react";
 export default function GeneratePage() {
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState("studio");
+  const [file, setFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,23 +18,35 @@ export default function GeneratePage() {
     setImageUrl(null);
 
     try {
+      // If user picked a file, read as base64 data URL
+      let fileDataUrl: string | undefined;
+      if (file) {
+        fileDataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Failed to read file"));
+          reader.readAsDataURL(file);
+        });
+      }
+
       const res = await fetch("/api/dalle/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, style }),
+        body: JSON.stringify({ prompt, style, file: fileDataUrl }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || `Error ${res.status}`);
-      } else {
-        setImageUrl(data.imageUrl);
-        // persist to library
-        await fetch("/api/images", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl: data.imageUrl }),
-        });
+        throw new Error(data.error || `Error ${res.status}`);
       }
+
+      setImageUrl(data.imageUrl);
+
+      // Save into library
+      await fetch("/api/images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: data.imageUrl }),
+      });
     } catch (err: any) {
       setError(err.message || "Network error");
     } finally {
@@ -43,27 +56,41 @@ export default function GeneratePage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-      <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow">
-        <h1 className="text-2xl mb-4 text-center">Generate a Product Image</h1>
+      <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow space-y-4">
+        <h1 className="text-2xl text-center">Generate a Product Image</h1>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block mb-1 text-sm">Prompt</label>
+          {/* Prompt */}
+          <label className="block">
+            <span className="text-sm">Prompt</span>
             <input
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="w-full border rounded p-2"
+              className="mt-1 block w-full border rounded p-2"
               placeholder="Describe your product…"
-              required
+              required={!file}
             />
-          </div>
+          </label>
 
-          <div>
-            <label className="block mb-1 text-sm">Background Style</label>
+          {/* File upload */}
+          <label className="block">
+            <span className="text-sm">Upload Base Image (optional)</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="mt-1 block w-full"
+            />
+          </label>
+
+          {/* Style dropdown */}
+          <label className="block">
+            <span className="text-sm">Background Style</span>
             <select
               value={style}
               onChange={(e) => setStyle(e.target.value)}
-              className="w-full border rounded p-2"
+              className="mt-1 block w-full border rounded p-2"
             >
               <option value="studio">Studio</option>
               <option value="outdoor">Outdoor</option>
@@ -89,8 +116,9 @@ export default function GeneratePage() {
               <option value="office desk">Office Desk</option>
               <option value="floating product">Floating Product</option>
             </select>
-          </div>
+          </label>
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -100,7 +128,7 @@ export default function GeneratePage() {
           </button>
         </form>
 
-        {error && <p className="mt-4 text-red-500">❌ {error}</p>}
+        {error && <p className="text-red-500">❌ {error}</p>}
 
         {imageUrl && (
           <div className="mt-6 text-center">
