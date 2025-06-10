@@ -18,7 +18,6 @@ export default function GeneratePage() {
     setImageUrl(null);
 
     try {
-      // If user picked a file, read as base64 data URL
       let fileDataUrl: string | undefined;
       if (file) {
         fileDataUrl = await new Promise<string>((resolve, reject) => {
@@ -34,14 +33,12 @@ export default function GeneratePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, style, file: fileDataUrl }),
       });
+
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || `Error ${res.status}`);
-      }
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
 
       setImageUrl(data.imageUrl);
 
-      // Save into library
       await fetch("/api/images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,7 +55,6 @@ export default function GeneratePage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
       <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow space-y-4">
         <h1 className="text-2xl text-center">Generate a Product Image</h1>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Prompt */}
           <label className="block">
@@ -86,7 +82,7 @@ export default function GeneratePage() {
 
           {/* Style dropdown */}
           <label className="block">
-            <span className="text-sm">Background Style</span>
+            <span className="text-sm">Background / Style</span>
             <select
               value={style}
               onChange={(e) => setStyle(e.target.value)}
@@ -115,6 +111,9 @@ export default function GeneratePage() {
               <option value="fitness">Fitness</option>
               <option value="office desk">Office Desk</option>
               <option value="floating product">Floating Product</option>
++             <option value="multi-view">
++               Multi-View: front, back & side
++             </option>
             </select>
           </label>
 
