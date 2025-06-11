@@ -3,15 +3,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "@/lib/supabase"; 
+import supabase from "@/lib/supabase";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const [email,    setEmail]    = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error,    setError]    = useState<string | null>(null);
-  const [message,  setMessage]  = useState<string | null>(null);
-  const [loading,  setLoading]  = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,15 +19,13 @@ export default function SignUpPage() {
     setMessage(null);
     setLoading(true);
 
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
     setLoading(false);
 
-    if (signUpError) {
-      setError(signUpError.message);
+    if (error) {
+      setError(error.message);
     } else {
-      setMessage("✔️ Check your inbox for a confirmation link.");
-      // Optionally redirect to /auth/login after a short delay:
-      // setTimeout(() => router.push("/auth/login"), 2000);
+      setMessage("✅ Check your email for a confirmation link.");
     }
   };
 
@@ -38,31 +36,28 @@ export default function SignUpPage() {
         className="w-full max-w-md bg-white p-6 rounded-lg shadow"
       >
         <h1 className="text-2xl mb-4">Sign Up</h1>
-        {error && <p className="mb-4 text-red-500">{error}</p>}
+        {error && <p className="mb-4 text-red-500">❌ {error}</p>}
         {message && <p className="mb-4 text-green-600">{message}</p>}
-
         <label className="block mb-3">
           <span className="block text-sm">Email</span>
           <input
             type="email"
-            className="mt-1 block w-full border rounded p-2"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            className="mt-1 block w-full border rounded p-2"
           />
         </label>
-
         <label className="block mb-4">
           <span className="block text-sm">Password</span>
           <input
             type="password"
-            className="mt-1 block w-full border rounded p-2"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            className="mt-1 block w-full border rounded p-2"
           />
         </label>
-
         <button
           type="submit"
           disabled={loading}
@@ -70,7 +65,6 @@ export default function SignUpPage() {
         >
           {loading ? "Signing up…" : "Sign Up"}
         </button>
-
         <p className="mt-4 text-center text-sm">
           Already have an account?{" "}
           <a href="/auth/login" className="text-green-600 hover:underline">

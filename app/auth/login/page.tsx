@@ -1,9 +1,9 @@
+// app/auth/login/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "@/lib/supabase"; // make sure supabase.ts is exporting `export default supabase;`
-import Link from "next/link";
+import supabase from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,14 +17,12 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    // Attempt sign-in with email/password
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
 
     if (error) {
       setError(error.message);
     } else {
-      // On success, redirect to /dashboard
       router.push("/dashboard");
     }
   };
@@ -36,25 +34,25 @@ export default function LoginPage() {
         className="w-full max-w-md bg-white p-6 rounded-lg shadow"
       >
         <h1 className="text-2xl mb-4">Log In</h1>
-        {error && <p className="mb-4 text-red-500">{error}</p>}
+        {error && <p className="mb-4 text-red-500">❌ {error}</p>}
         <label className="block mb-3">
           <span className="block text-sm">Email</span>
           <input
             type="email"
-            className="mt-1 block w-full border rounded p-2"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            className="mt-1 block w-full border rounded p-2"
           />
         </label>
         <label className="block mb-4">
           <span className="block text-sm">Password</span>
           <input
             type="password"
-            className="mt-1 block w-full border rounded p-2"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            className="mt-1 block w-full border rounded p-2"
           />
         </label>
         <button
@@ -66,9 +64,9 @@ export default function LoginPage() {
         </button>
         <p className="mt-4 text-center text-sm">
           Don’t have an account?{" "}
-          <Link href="/auth/signup" className="text-blue-600 hover:underline">
+          <a href="/auth/signup" className="text-blue-600 hover:underline">
             Sign Up
-          </Link>
+          </a>
         </p>
       </form>
     </div>

@@ -1,4 +1,3 @@
-// app/api/dalle/generate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -10,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const { prompt, style, file } = await req.json();
 
-    // Special multi-view add-on
+    // Build the full prompt
     let fullPrompt = prompt;
     if (style === "multi-view") {
       fullPrompt +=
@@ -19,21 +18,27 @@ export async function POST(req: NextRequest) {
       fullPrompt += `, ${style}`;
     }
 
-    // handle file vs. text as before...
+    console.log("Using DALL·E 3 with prompt:", fullPrompt);
+
     let result;
     if (file) {
+      // Handle uploaded image for variation
       const match = file.match(/^data:(.+);base64,(.+)$/);
       if (!match) throw new Error("Invalid file upload format");
+
       const [, mimeType, b64data] = match;
       const buffer = Buffer.from(b64data, "base64");
       const upload = new File([buffer], "upload.png", { type: mimeType });
+
       result = await openai.images.createVariation({
         image: upload,
         n: 1,
         size: "1024x1024",
       });
     } else {
+      // Generate new image using DALL·E 3
       result = await openai.images.generate({
+        model: "dall-e-3", // 
         prompt: fullPrompt,
         n: 1,
         size: "1024x1024",
