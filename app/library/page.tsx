@@ -1,75 +1,129 @@
-// app/library/page.tsx
-import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabaseServer";
-import Link from "next/link";
+'use client';
 
-type Props = { searchParams?: { page?: string } };
+import { useEffect, useState, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
 
-export default async function LibraryPage({ searchParams }: Props) {
-  // 1) Protect route
-  const {
-    data: { session },
-  } = await supabaseServer.auth.getSession();
-  if (!session) redirect("/auth/login");
+export default function LibraryPage() {
+  const [images, setImages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 9;
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  // 2) Pagination setup
-  const page = parseInt(searchParams?.page || "1", 10);
-  const pageSize = 12;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  useEffect(() => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+      await fetchImages(user.id, 0);
+    };
+    init();
+  }, []);
 
-  // 3) Fetch only THIS user’s images
-  const { data: images = [], error } = await supabaseServer
-    .from("images")
-    .select("id, image_url, created_at")
-    .eq("user_id", session.user.id)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  const fetchImages = async (uid: string, pageIndex: number) => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("images")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false })
+      .range(pageIndex * pageSize, (pageIndex + 1) * pageSize - 1);
 
-  if (error) {
-    console.error("Error loading images:", error);
-    return <div className="p-6">Failed to load images.</div>;
-  }
+    if (!error && data) {
+      setImages(prev => [...prev, ...data]);
+      setPage(pageIndex);
+    } else {
+      console.error("Error fetching images:", error?.message);
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async (image: any) => {
+    const path = image.image_url.split("/storage/v1/object/public/product-images/")[1];
+    if (!path) return;
+
+    const { error: storageError } = await supabase.storage.from("product-images").remove([path]);
+    const { error: dbError } = await supabase.from("images").delete().eq("id", image.id);
+
+    if (storageError || dbError) {
+      console.error("Delete failed:", storageError?.message || dbError?.message);
+      return;
+    }
+
+    setImages(prev => prev.filter(img => img.id !== image.id));
+  };
+
+  const handleObserver = (entries: IntersectionObserverEntry[]) => {
+    const target = entries[0];
+    if (target.isIntersecting && userId) {
+      fetchImages(userId, page + 1);
+    }
+  };
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleObserver, { threshold: 1.0 });
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [loadMoreRef.current, page, userId]);
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl mb-4">Your Image Library</h1>
-
-      {images.length === 0 ? (
-        <p>
-          No images yet.{" "}
-          <Link href="/generate" className="underline text-blue-600">
-            Generate one now
-          </Link>
-          .
-        </p>
+      {images.length === 0 && !loading ? (
+        <p className="text-center text-gray-500">No images found yet.</p>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
-          {images.map((img) => (
-            <div key={img.id} className="border rounded overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {images.map((image) => (
+            <div key={image.id} className="bg-white rounded-lg shadow p-4 relative group">
               <img
-                src={img.image_url}
-                alt="User generated"
-                className="w-full h-auto block"
+                src={image.image_url}
+                alt={image.prompt}
+                className="w-full h-auto object-cover rounded cursor-pointer"
+                onClick={() => setLightboxUrl(image.image_url)}
               />
+              <p className="text-sm mt-2 text-gray-600">{image.prompt}</p>
+              <p className="text-xs text-gray-400">
+                {new Date(image.created_at).toLocaleString()}
+              </p>
+              <div className="flex justify-between mt-2 space-x-2 opacity-0 group-hover:opacity-100 transition">
+                <a
+                  href={image.image_url}
+                  download
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  Download
+                </a>
+                <button
+                  onClick={() => handleDelete(image)}
+                  className="text-red-600 hover:underline text-sm"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Pagination Controls */}
-      <div className="mt-6 flex justify-between">
-        {page > 1 && (
-          <Link href={`/library?page=${page - 1}`} className="underline">
-            ← Previous
-          </Link>
-        )}
-        {images.length === pageSize && (
-          <Link href={`/library?page=${page + 1}`} className="underline">
-            Next →
-          </Link>
-        )}
+      {/* Infinite Scroll Sentinel */}
+      <div ref={loadMoreRef} className="h-10 mt-10 flex justify-center items-center">
+        {loading && <p className="text-gray-400">Loading more...</p>}
       </div>
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          onClick={() => setLightboxUrl(null)}
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+        >
+          <img
+            src={lightboxUrl}
+            alt="Preview"
+            className="max-w-full max-h-[90vh] rounded"
+          />
+        </div>
+      )}
     </div>
   );
 }

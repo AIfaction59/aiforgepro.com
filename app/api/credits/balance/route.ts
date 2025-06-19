@@ -1,12 +1,12 @@
 // app/api/credits/balance/route.ts
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import { supabaseServer } from "@/lib/supabaseServer";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export async function GET() {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createSupabaseServerClient();
 
     const {
       data: { session },

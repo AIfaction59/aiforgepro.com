@@ -1,25 +1,29 @@
-// app/page.tsx
 "use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "@/lib/supabase";
+import supabase from "@/lib/supabase/browser";
 
 export default function HomePage() {
   const router = useRouter();
 
-  // If already logged in, send to /dashboard
+  // Redirect to dashboard if already logged in
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace("/dashboard");
-    });
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace("/dashboard");
+      }
+    };
+    checkSession();
   }, [router]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
       <h1 className="text-4xl font-bold mb-4">Welcome to AiForgePro</h1>
-      <p className="mb-6 text-lg">
-        Generate AI images, store them in your private library, and purchase credits on demand.
+      <p className="mb-6 text-lg text-center max-w-xl">
+        Generate stunning AI product images, save them to your private library,
+        and manage your creative assets in one place.
       </p>
       <div className="space-x-4">
         <button
