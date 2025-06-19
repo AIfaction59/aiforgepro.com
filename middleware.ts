@@ -1,10 +1,8 @@
-// middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 
-export const runtime = "edge"; // optional but recommended for auth-related middleware
-
+// Middleware to protect authenticated routes
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
@@ -15,14 +13,15 @@ export async function middleware(req: NextRequest) {
 
   if (!session) {
     const loginUrl = new URL("/auth/login", req.url);
-    loginUrl.searchParams.set("redirectedFrom", req.nextUrl.href); // preserve full path
+    // Preserve full path (including query string and hash)
+    loginUrl.searchParams.set("redirectedFrom", req.nextUrl.href);
     return NextResponse.redirect(loginUrl);
   }
 
   return res;
 }
 
-// Only protect /dashboard and its children
+// Apply only to the dashboard and its subroutes
 export const config = {
   matcher: ["/dashboard/:path*"],
 };
