@@ -1,29 +1,30 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useEffect, useState, useRef } from "react";
+import { useSupabaseClient, useSession } from "@supabase/auth-helpers-react";
 
 export default function LibraryPage() {
+  const supabase = useSupabaseClient();
+  const session = useSession();
+
   const [images, setImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const pageSize = 9;
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+  const userId = session?.user?.id ?? null;
+
   useEffect(() => {
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUserId(user.id);
-      await fetchImages(user.id, 0);
-    };
-    init();
-  }, []);
+    if (!userId) return;
+
+    fetchImages(userId, 0);
+  }, [userId]);
 
   const fetchImages = async (uid: string, pageIndex: number) => {
     setLoading(true);
+
     const { data, error } = await supabase
       .from("images")
       .select("*")
@@ -32,11 +33,12 @@ export default function LibraryPage() {
       .range(pageIndex * pageSize, (pageIndex + 1) * pageSize - 1);
 
     if (!error && data) {
-      setImages(prev => [...prev, ...data]);
+      setImages((prev) => [...prev, ...data]);
       setPage(pageIndex);
     } else {
       console.error("Error fetching images:", error?.message);
     }
+
     setLoading(false);
   };
 
@@ -52,7 +54,7 @@ export default function LibraryPage() {
       return;
     }
 
-    setImages(prev => prev.filter(img => img.id !== image.id));
+    setImages((prev) => prev.filter((img) => img.id !== image.id));
   };
 
   const handleObserver = (entries: IntersectionObserverEntry[]) => {
@@ -106,22 +108,16 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {/* Infinite Scroll Sentinel */}
       <div ref={loadMoreRef} className="h-10 mt-10 flex justify-center items-center">
         {loading && <p className="text-gray-400">Loading more...</p>}
       </div>
 
-      {/* Lightbox */}
       {lightboxUrl && (
         <div
           onClick={() => setLightboxUrl(null)}
           className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
         >
-          <img
-            src={lightboxUrl}
-            alt="Preview"
-            className="max-w-full max-h-[90vh] rounded"
-          />
+          <img src={lightboxUrl} alt="Preview" className="max-w-full max-h-[90vh] rounded" />
         </div>
       )}
     </div>
