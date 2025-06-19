@@ -1,6 +1,6 @@
 // app/dashboard/page.tsx
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabaseServer";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import Link from "next/link";
 
 export default async function DashboardPage() {
