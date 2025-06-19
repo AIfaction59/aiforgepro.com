@@ -1,11 +1,10 @@
-// app/providers.tsx
-"use client";
+'use client';
 
-import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
-import { SessionContextProvider } from "@supabase/auth-helpers-react";
-import { useState } from "react";
+import { SessionContextProvider } from '@supabase/auth-helpers-react';
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { useState } from 'react';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({ children }: { children: React.ReactNode }) {
   const [supabaseClient] = useState(() => createPagesBrowserClient());
 
   return (
