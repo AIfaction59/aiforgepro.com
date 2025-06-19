@@ -2,21 +2,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import supabase from "@/lib/supabase/browser";
+import { useSupabaseClient, useSession } from "@supabase/auth-helpers-react";
 
 export default function HomePage() {
   const router = useRouter();
+  const supabase = useSupabaseClient();
+  const session = useSession();
 
   // Redirect to dashboard if already logged in
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        router.replace("/dashboard");
-      }
-    };
-    checkSession();
-  }, [router]);
+    if (session) {
+      router.replace("/dashboard");
+    }
+  }, [session, router]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
