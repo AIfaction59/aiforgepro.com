@@ -1,51 +1,53 @@
-// app/api/webhook/stripe/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { stripe } from "@/lib/stripe";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-04-30.basil", // make sure this matches your installed SDK version
-});
-
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const buf = Buffer.from(await req.arrayBuffer());
-  const sig = req.headers.get("stripe-signature")!;
+  const supabase = createSupabaseServerClient();
+  const body = await req.text();
+  const sig = headers().get("stripe-signature");
 
-  let event: Stripe.Event;
+  let event;
+
   try {
-    event = stripe.webhooks.constructEvent(buf, sig, endpointSecret);
-  } catch (err) {
-    console.error("⚠️  Webhook signature verification failed.", err);
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    if (!sig) throw new Error("Missing Stripe signature");
+    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+  } catch (err: any) {
+    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const userId = session.metadata?.userId!;
-    const creditsToAdd = parseInt(session.metadata?.credits || "0", 10);
+    const session = event.data.object;
 
-    if (userId && creditsToAdd > 0) {
-      const { data: profile, error: fetchErr } = await supabaseServer
+    const userId = session?.metadata?.user_id;
+    const credits = session?.metadata?.credits || 0;
+
+    if (userId) {
+      const { data: profile, error: fetchErr } = await supabase
         .from("profiles")
         .select("credits")
         .eq("id", userId)
         .single();
 
       if (fetchErr) {
-        console.error("❌ Error fetching profile:", fetchErr);
-      } else {
-        const newTotal = (profile.credits || 0) + creditsToAdd;
-        const { error: updateErr } = await supabaseServer
-          .from("profiles")
-          .update({ credits: newTotal })
-          .eq("id", userId);
+        return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+      }
 
-        if (updateErr) console.error("❌ Error updating credits:", updateErr);
+      const newBalance = (profile?.credits || 0) + parseInt(credits, 10);
+
+      const { error: updateErr } = await supabase
+        .from("profiles")
+        .update({ credits: newBalance })
+        .eq("id", userId);
+
+      if (updateErr) {
+        return NextResponse.json({ error: updateErr.message }, { status: 500 });
       }
     }
   }
 
-  return NextResponse.json({ received: true }, { status: 200 });
+  return NextResponse.json({ received: true });
 }
